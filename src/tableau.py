@@ -13,6 +13,16 @@ class PivotException(Exception):
 class InvalidBranchException(Exception):
     pass
 
+EPSILON = 10e-7
+
+
+def eq(lhs, rhs, epsilon=EPSILON):
+    return np.abs(lhs - rhs) < EPSILON
+
+
+def neq(lhs, rhs, epsilon=EPSILON):
+    return not eq(lhs, rhs, epsilon)
+
 
 class Tableau:
 
@@ -72,8 +82,7 @@ class Tableau:
     def canonical(self):
         if self._canonical is None:
             # Check for identity columns
-            if (all(self.basis)
-                    and all(b >= 0 for b in self.b)):
+            if (all(self.basis) and all(b >= 0 for b in self.b)):
                 self._canonical = True
             else:
                 self._canonical = False
@@ -89,7 +98,7 @@ class Tableau:
     def infeasible(self):
         if self._infeasible is None:
             for i, b in enumerate(self.b):
-                if ((b != 0 and all(a == 0 for a in self.A[i, :]))
+                if ((neq(b, 0) and all(eq(a, 0) for a in self.A[i, :]))
                         or (b < 0 and all(a >= 0 for a in self.A[i, :]))
                         or (b > 0 and all(a <= 0 for a in self.A[i, :]))):
                     self._infeasible = True
@@ -131,9 +140,9 @@ class Tableau:
         '''
         one_index = None
         for row_index, val in enumerate(self._array[:, col_index]):
-            if val != 0 and val != 1:
+            if neq(val, 0) and neq(val, 1):
                 return False, None
-            elif val == 1:
+            elif eq(val, 1):
                 if one_index is not None:
                     return False, None
                 else:
@@ -144,8 +153,8 @@ class Tableau:
 
     def _del_empty_rcs(self):
         arr = self._array
-        rows = np.abs(arr).sum(0) != 0
-        cols = np.abs(arr).sum(1) != 0
+        rows = neq(np.abs(arr).sum(0), 0)
+        cols = neq(np.abs(arr).sum(1), 0)
         self._array = arr[np.ix_(rows, cols)]
 
     def pivot(self, row, column):
@@ -154,15 +163,15 @@ class Tableau:
         if r <= 0 or c <= 0:
             raise PivotException('Invalid pivot! Must pivot in A!')
         pivot = arr[r, c]
-        if pivot == 0:
+        if eq(pivot, 0):
             raise PivotException('Pivot must be non-zero!')
-        if pivot != 1:
+        if neq(pivot, 1):
             arr[r, :] /= pivot
         for i in range(self.n):
             if i == r:
                 continue
             a_ic = arr[i, c]
-            if a_ic != 0:
+            if neq(a_ic, 0):
                 arr[i, :] -= a_ic * arr[r, :]
         self._canonical = None
         self._optimal = None
@@ -217,19 +226,19 @@ class Tableau:
             # Already have basis
             return None
         for c in cols:
-            if self._array[row, c] != 0:
+            if neq(self._array[row, c], 0):
                 return row, c
         else:
             raise PivotException('Impossible to establish basis.')
 
     def get_subproblem_pivot(self):
-        if np.sum(self.basis == 0) > 0:
+        if any(self.basis == 0):
             raise PivotException("Must have full basis")
         if self.canonical or self.infeasible:
             return None
         arr = self._array[1:, :]
         b_negs = self.b < 0
-        i_b = next(i for i,b in enumerate(b_negs) if b)
+        i_b = next(i for i, b in enumerate(b_negs) if b)
         # Form a subproblem with one of the b's
         sub_c = arr[i_b, :].reshape(1, self.m)
         sub_bA = arr[~b_negs, :]
@@ -247,14 +256,14 @@ class Tableau:
                 pivot = r, c
         else:
             sub_r, c = pivot
-            r = next(i for i,b in enumerate(~b_negs) if b and i == sub_r)
+            r = next(i for i, b in enumerate(~b_negs) if b and i == sub_r)
             pivot = r, c
         return pivot
 
     def simplex_pivot(self):
         pivot = self.get_simplex_pivot()
         if not pivot:
-            return self  # Can't simplex pivot
+            return self
         return self.pivot(*pivot)
 
     def dual_simplex_pivot(self):
