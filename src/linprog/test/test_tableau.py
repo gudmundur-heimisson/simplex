@@ -5,8 +5,8 @@ Created on May 21, 2016
 '''
 
 import numpy as np
-from tableau import Tableau
-from . import LoggingTest
+from linprog.test import LoggingTest
+from linprog import Tableau
 
 
 def error(X, Y):

@@ -7,9 +7,9 @@ Created on May 22, 2016
 import numpy as np
 import logging
 import sys
-from tableau import Tableau
-from simplex import Simplex
-from . import LoggingTest
+from linprog.test import LoggingTest
+from linprog import Tableau
+from linprog import Simplex
 
 
 class SimplexTest(LoggingTest):
