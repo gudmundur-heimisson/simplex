@@ -5,10 +5,9 @@ Created on May 21, 2016
 '''
 
 import numpy as np
-import logging
-import sys
 from tableau import Tableau
 from . import LoggingTest
+
 
 def error(X, Y):
     return np.sum(np.abs(X) - np.abs(Y))
@@ -87,7 +86,7 @@ class TableauTest(LoggingTest):
                                [50., 1., 1., 0., 3., 1., 0., 0.],
                                [9., 0., 0., 0., 0., 0., 0., 1.]]))
         pivot = T.get_subproblem_pivot()
-        self.assertTupleEqual(pivot, (1,3))
+        self.assertTupleEqual(pivot, (1, 3))
         T.subproblem_pivot()
         self.assertAlmostEqual(error(T.M, T2.M), 0)
         self.assertTrue(T.optimal)

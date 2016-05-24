@@ -7,6 +7,7 @@ import logging
 import sys
 from unittest import TestCase
 
+
 class LoggingTest(TestCase):
 
     logger = logging.getLogger()

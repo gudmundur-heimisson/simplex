@@ -285,8 +285,8 @@ class Tableau:
         else:
             sub_r, c = sub_pivot
             r = next(i_b + 1 for i_subM, i_b
-                     in enumerate((i_b for b, i_b
-                                   in enumerate(~b_negs) if b))
+                     in enumerate(i_b for b, i_b
+                                  in enumerate(~b_negs) if b)
                      if i_subM == sub_r)
             pivot = r, c
         return pivot

@@ -11,6 +11,7 @@ from tableau import Tableau
 from simplex import Simplex
 from . import LoggingTest
 
+
 class SimplexTest(LoggingTest):
 
     logger = logging.getLogger()
