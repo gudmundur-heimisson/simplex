@@ -5,12 +5,18 @@ Created on May 22, 2016
 '''
 
 import numpy as np
-from unittest import TestCase
+import logging
+import sys
 from tableau import Tableau
 from simplex import Simplex
+from . import LoggingTest
 
+class SimplexTest(LoggingTest):
 
-class SimplexTest(TestCase):
+    logger = logging.getLogger()
+    handler = logging.StreamHandler(sys.stdout)
+    logger.addHandler(handler)
+    logger.setLevel(logging.DEBUG)
 
     def test_simplex(self):
         # From HW2 #
@@ -70,3 +76,4 @@ class SimplexTest(TestCase):
             self.assertTrue(M.optimal or M.infeasible)
             print(s.iters, " iterations to solve.")
             print("Optimal!" if M.optimal else "Infeasible!")
+            print('{:=^75}'.format(''))

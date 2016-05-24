@@ -4,6 +4,9 @@ Created on May 21, 2016
 @author: Gudmundur Heimisson
 '''
 import numpy as np
+import logging
+
+_logger = logging.getLogger(__name__)
 
 
 class PivotException(Exception):
@@ -13,7 +16,8 @@ class PivotException(Exception):
 class InvalidBranchException(Exception):
     pass
 
-EPSILON = 10e-7
+
+EPSILON = 1e-7
 
 
 def eq(lhs, rhs, epsilon=EPSILON):
@@ -72,6 +76,7 @@ class Tableau:
     @property
     def x(self):
         if self._vars is None and self.canonical:
+            _logger.debug("Checking vars")
             # Initialize to zeros
             self._vars = np.zeros(self.m - 1)
             for col_index, b in zip(self.basis_cols, self.b):
@@ -81,6 +86,7 @@ class Tableau:
     @property
     def canonical(self):
         if self._canonical is None:
+            _logger.debug("Checking if canonical.")
             # Check for identity columns
             if (all(self.basis) and all(b >= 0 for b in self.b)):
                 self._canonical = True
@@ -91,12 +97,16 @@ class Tableau:
     @property
     def optimal(self):
         if self._optimal is None:
+            _logger.debug("Checking if optimal.")
             self._optimal = self.canonical and all(c >= 0 for c in self.c)
+            if self._optimal:
+                self._infeasible = self._unbounded = False
         return self._optimal
 
     @property
     def infeasible(self):
         if self._infeasible is None:
+            _logger.debug("Checking if infeasible.")
             for i, b in enumerate(self.b):
                 if ((neq(b, 0) and all(eq(a, 0) for a in self.A[i, :]))
                         or (b < 0 and all(a >= 0 for a in self.A[i, :]))
@@ -105,22 +115,28 @@ class Tableau:
                     break
             else:
                 self._infeasible = False
+            if self._infeasible:
+                self._optimal = self._unbounded = False
         return self._infeasible
 
     @property
     def unbounded(self):
         if self._unbounded is None:
-            if not self._canonical:
+            _logger.debug("Checking if unbounded")
+            if not self.canonical:
                 self._unbounded = False
             else:
                 self._unbounded = any(c < 0 and
                                       all(a <= 0 for a in self.A[:, i])
                                       for i, c in enumerate(self.c))
+            if self._unbounded:
+                self._optimal = self._infeasible = False
         return self._unbounded
 
     @property
     def basis(self):
         if self._basis is None:
+            _logger.debug("Finding basis")
             cols = np.zeros(self.n - 1, dtype='int_')
             for col_index in range(1, self.m):
                 is_basic, x_index = self._is_basic_col(col_index)
@@ -158,6 +174,7 @@ class Tableau:
         self._array = arr[np.ix_(rows, cols)]
 
     def pivot(self, row, column):
+        _logger.debug("Pivoting on %s, %s" % (row, column))
         r, c = row, column
         arr = self._array
         if r <= 0 or c <= 0:
@@ -182,9 +199,12 @@ class Tableau:
         return self
 
     def get_simplex_pivot(self):
+        _logger.debug("Computing simplex pivot")
         if not self.canonical:
             raise PivotException("Must be in canonical form.")
-        if self.optimal or self.unbounded:
+        if self.unbounded:
+            raise PivotException("Tableau is unbounded.")
+        if self.optimal:
             return None
         # Find column with most negative c
         j, _ = min(enumerate(self.c), key=lambda t: t[1])
@@ -196,6 +216,7 @@ class Tableau:
         return i + 1, j + 1
 
     def get_dual_simplex_pivot(self):
+        _logger.debug("Computing dual simplex pivot")
         if not all(c >= 0 for c in self.c):
             raise PivotException("Must have c >= 0 to dual simplex pivot")
         if not all(self.basis):
@@ -213,6 +234,7 @@ class Tableau:
         return i + 1, j + 1
 
     def get_basis_pivot(self):
+        _logger.debug("Computing basis pivot")
         # Find out which basis rows are missing, and which cols do not
         # already contain a basis
         cols = list(range(1, self.m))
@@ -232,6 +254,7 @@ class Tableau:
             raise PivotException('Impossible to establish basis.')
 
     def get_subproblem_pivot(self):
+        _logger.debug("Computing subproblem pivot")
         if any(self.basis == 0):
             raise PivotException("Must have full basis")
         if self.canonical or self.infeasible:
@@ -243,19 +266,24 @@ class Tableau:
         sub_c = arr[i_b, :].reshape(1, self.m)
         sub_bA = arr[~b_negs, :]
         sub_M = Tableau(np.r_[sub_c, sub_bA])
-        pivot = sub_M.get_simplex_pivot()
-        if not pivot:
-            # Subproblem is unbounded or optimal
+        if sub_M.unbounded:
+            r = i_b + 1
+            c = next(j + 1 for j, a in enumerate(self.A[i_b, :]) if a < 0)
+            return r, c
+        sub_pivot = sub_M.get_simplex_pivot()
+        if not sub_pivot:
+            # Subproblem is either unbounded or optimal
             if sub_M.optimal:
                 # Original tableau is infeasible
                 self._infeasible = True
+                self._optimal = self._unbounded = False
                 return None
             else:
                 r = i_b + 1
                 c = next(j + 1 for j, a in enumerate(self.A[i_b, :]) if a < 0)
                 pivot = r, c
         else:
-            sub_r, c = pivot
+            sub_r, c = sub_pivot
             r = next(i_b + 1 for i_subM, i_b
                      in enumerate((i_b for b, i_b
                                    in enumerate(~b_negs) if b))
@@ -265,9 +293,11 @@ class Tableau:
 
     def simplex_pivot(self):
         pivot = self.get_simplex_pivot()
-        if not pivot:
-            return self
-        return self.pivot(*pivot)
+        if pivot:
+            self.pivot(*pivot)
+            # Simplex pivot preserves canonicity
+            self._canonical = True
+        return self
 
     def dual_simplex_pivot(self):
         pivot = self.get_dual_simplex_pivot()

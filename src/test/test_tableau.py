@@ -5,15 +5,16 @@ Created on May 21, 2016
 '''
 
 import numpy as np
-from unittest import TestCase
+import logging
+import sys
 from tableau import Tableau
-
+from . import LoggingTest
 
 def error(X, Y):
     return np.sum(np.abs(X) - np.abs(Y))
 
 
-class TableauTest(TestCase):
+class TableauTest(LoggingTest):
 
     def test_basis_pivot(self):
         T = Tableau(np.array([[0., -6., -5., -3., -7., 0., 0., 0.],
