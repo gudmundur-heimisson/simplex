@@ -85,6 +85,8 @@ class TableauTest(TestCase):
                                [8., 0., -1., 0., -7., 0., 1., 0.],
                                [50., 1., 1., 0., 3., 1., 0., 0.],
                                [9., 0., 0., 0., 0., 0., 0., 1.]]))
+        pivot = T.get_subproblem_pivot()
+        self.assertTupleEqual(pivot, (1,3))
         T.subproblem_pivot()
         self.assertAlmostEqual(error(T.M, T2.M), 0)
         self.assertTrue(T.optimal)

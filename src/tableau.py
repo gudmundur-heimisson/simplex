@@ -63,7 +63,7 @@ class Tableau:
 
     @property
     def z(self):
-        return -self._array[0, 0]
+        return -self._array[0, 0] if self.canonical else None
 
     @property
     def M(self):
@@ -198,7 +198,7 @@ class Tableau:
     def get_dual_simplex_pivot(self):
         if not all(c >= 0 for c in self.c):
             raise PivotException("Must have c >= 0 to dual simplex pivot")
-        if any(col is None for col in self.basis):
+        if not all(self.basis):
             raise PivotException('Must have full set of basis columns')
         if self.optimal or self.infeasible:
             return None
@@ -251,12 +251,15 @@ class Tableau:
                 self._infeasible = True
                 return None
             else:
-                r = i_b
-                c = next(j for j, a in enumerate(self.A[r, :]) if a < 0)
+                r = i_b + 1
+                c = next(j + 1 for j, a in enumerate(self.A[i_b, :]) if a < 0)
                 pivot = r, c
         else:
             sub_r, c = pivot
-            r = next(i for i, b in enumerate(~b_negs) if b and i == sub_r)
+            r = next(i_b + 1 for i_subM, i_b 
+                     in enumerate((i_b for b, i_b 
+                                   in enumerate(~b_negs) if b))
+                     if i_subM == sub_r)
             pivot = r, c
         return pivot
 
