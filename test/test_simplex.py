@@ -9,6 +9,7 @@ from unittest import TestCase
 from tableau import Tableau
 from simplex import Simplex
 
+
 class SimplexTest(TestCase):
 
     def test_simplex(self):
@@ -60,7 +61,7 @@ class SimplexTest(TestCase):
                                 165, 2, 1, 2, 1, 0, 1, 0,
                                 80, 1, 1, 1, 4, 0, 0, 1]).reshape(4, 8))
         tableaus = [M1, M2, M3, M4, M5, M6, M7, M8, M9, M10, M11]
-        for i,M in enumerate(tableaus):
+        for i, M in enumerate(tableaus):
             print("Tableau:", M, sep="\n")
             s = Simplex(M)
             for i, t in enumerate(s):
